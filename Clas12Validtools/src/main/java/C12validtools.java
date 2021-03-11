@@ -1,4 +1,4 @@
-/*
+package Clas12Validtools.src.main.java;/*
  * To change this license header, choose License Headers in Project Properties.
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
@@ -10,11 +10,13 @@
  */
 import java.io.File;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import javax.swing.JFrame;
 
 import com.sun.prism.Graphics;
+import org.jlab.clas.detector.DetectorResponse;
 import org.jlab.io.base.DataBank;
 import org.jlab.io.base.DataEvent;
 import org.jlab.io.hipo.HipoDataSource;
@@ -31,15 +33,31 @@ import org.jlab.groot.graphics.EmbeddedCanvasTabbed;
 import org.jlab.groot.group.DataGroup;
 import org.jlab.utils.groups.IndexedList;
 
-public class C12validtools {
+public class C12validtools extends DetectorResponse {
 
     int nEvents = 0;
-    private DataBank recBank;
-    private DataBank runBank;
+
+    DataBank mcBank=null,ctrkBank=null,calBank=null,ctofBank=null;
+    DataBank trkBank=null,tofBank=null,htccBank=null,ltccBank=null;
+    DataBank recPartBank=null,recFtPartBank=null,recTrkBank=null,recFtBank=null;
+    DataBank recCalBank=null,recSciBank=null,recCheBank=null;
+    DataBank ftcBank=null,fthBank=null,ftpartBank=null,recBank=null,runBank=null;
+
+    Map <Integer,List<Integer>> recCalMap=new HashMap<Integer,List<Integer>>();
+    Map <Integer,List<Integer>> recCheMap=new HashMap<Integer,List<Integer>>();
+    Map <Integer,List<Integer>> recSciMap=new HashMap<Integer,List<Integer>>();
+    Map <Integer,List<Integer>> recTrkMap=new HashMap<Integer,List<Integer>>();
+
+
+
+    //private DataBank recBank;
+    //private DataBank runBank;
     IndexedList<DataGroup> dataGroups      = new IndexedList<DataGroup>(1);
     EmbeddedCanvasTabbed   canvasTabbed    = null;
     ArrayList<String>      canvasTabNames  = new ArrayList<String>();
-
+    ArrayList<Double>      REC_Data        = new ArrayList<Double>();
+    //ArrayList<Particle>    REC_DataArray        = new ArrayList<Particle>();
+    ArrayList<Particle> REC_DataArray = new ArrayList<>();
 
     public static void main(String[] args){
         C12validtools ttest = new C12validtools();
@@ -48,8 +66,8 @@ public class C12validtools {
 
         ttest.CreateHistos();
 
-        String fileName="/Users/fizikci0147/work/clas_work/clas_validation_tools/small.hipo";
-        //String fileName="/Users/michaelnycz/JLAB_Programs/clas_validation_tools/small.hipo";
+        //String fileName="/Users/fizikci0147/work/clas_work/clas_validation_tools/small.hipo";
+        String fileName="/Users/michaelnycz/JLAB_Programs/clas_validation_tools/small.hipo";
         File file = new File(fileName);
         if (!file.exists() || file.isDirectory()) {
             System.err.println("Cannot find input file.");
@@ -60,8 +78,11 @@ public class C12validtools {
 
         while (reader.hasEvent()) {
             DataEvent event = reader.getNextEvent();
+            ttest.getBanks(event);
             ttest.ProcessEvent(event);
         }
+        //ttest.Read_Array(ttest.REC_Data);
+        ttest.Read_RECArray(ttest.REC_DataArray);
         reader.close();
         JFrame frame = new JFrame("C12Validtools");
         frame.setSize(1200, 800);
@@ -122,9 +143,31 @@ public class C12validtools {
     }
 
     private void getBanks(DataEvent de) {
-        recBank     = getBank(de,"REC::Event");
-        runBank     = getBank(de,"RUN::config");
-        loadMaps();
+        //recBank     = getBank(de,"REC::Event");
+        //runBank     = getBank(de,"RUN::config");
+        //System.out.println("Getting all Banks");
+            ctrkBank    = getBank(de,"CVTRec::Tracks");
+            tofBank     = getBank(de,"FTOF::clusters");
+            trkBank     = getBank(de,"TimeBasedTrkg::TBTracks");
+            recPartBank = getBank(de,"REC::Particle");
+            recFtPartBank = getBank(de,"RECFT::Particle");
+            mcBank      = getBank(de,"MC::Particle");
+            recCheBank  = getBank(de,"REC::Cherenkov");
+            recCalBank  = getBank(de,"REC::Calorimeter");
+            recSciBank  = getBank(de,"REC::Scintillator");
+            ltccBank    = getBank(de,"LTCC::clusters");
+            htccBank    = getBank(de,"HTCC::rec");
+            recTrkBank  = getBank(de,"REC::Track");
+            recFtBank   = getBank(de,"REC::ForwardTagger");
+            ftcBank     = getBank(de,"FTCAL::clusters");
+            fthBank     = getBank(de,"FTHODO::clusters");
+            ftpartBank  = getBank(de,"FT::particles");
+            calBank     = getBank(de,"ECAL::clusters");
+            ctofBank    = getBank(de,"CTOF::hits");
+            recBank     = getBank(de,"REC::Event");
+            runBank     = getBank(de,"RUN::config");
+            loadMaps();
+
     }
 
     public void loadMap(Map<Integer,List<Integer>> map, 
@@ -154,6 +197,7 @@ public class C12validtools {
      */
     public void loadMaps() {
         //loadMap(recCalMap,recCalBank,recPartBank,"pindex");
+
     }
 
 
@@ -163,38 +207,85 @@ public class C12validtools {
     }
 
 
+    public void Response (int sector, int layer, int component){
+        this.getDescriptor().setSectorLayerComponent(sector, layer, component);
+    }
+
+
+
     private void ProcessEvent(DataEvent event) {
         nEvents++;
+        int index = 0;
+        float energy = 0;
+        float time=0;
+        float x,y,z=0;
+        int sector;
+        int layer;
+        int paddle=0;
         if ((nEvents % 10000) == 0) System.out.println("Analyzed " + nEvents + " events");
-
        if(event.hasBank("REC::Particle")==true) {
-            DataBank bank = event.getBank("REC::Particle");
-            int rows = bank.rows();
-            for (int loop = 0; loop < rows; loop++) {
+
+            //DataBank bank = event.getBank("REC::Particle");
+            //int rows = bank.rows();
+           int rows = recPartBank.rows();
+            for (int loop = 0; loop < recPartBank.rows(); loop++) {
                 int pidCode = 0;
-                if (bank.getByte("q", loop) == -1) pidCode = 11;
-                else if (bank.getByte("q", loop) == 1) pidCode = 211;
+                if (recPartBank.getByte("charge", loop) == -1) pidCode = 11;
+                else if (recPartBank.getByte("charge", loop) == 1) pidCode = 211;
                 else pidCode = 22;
 
                 Particle recParticle = new Particle(
                         pidCode,
-                        bank.getFloat("px", loop),
-                        bank.getFloat("py", loop),
-                        bank.getFloat("pz", loop),
-                        bank.getFloat("Vx", loop),
-                        bank.getFloat("Vy", loop),
-                        bank.getFloat("Vz", loop));
-                float vert_t = bank.getFloat("Vt", loop);
+                        recPartBank.getFloat("px", loop),
+                        recPartBank.getFloat("py", loop),
+                        recPartBank.getFloat("pz", loop),
+                        recPartBank.getFloat("vx", loop),
+                        recPartBank.getFloat("vy", loop),
+                        recPartBank.getFloat("vz", loop));
+                float vert_t = recPartBank.getFloat("vt", loop);
 
-                System.out.println(recParticle.charge());
+                REC_DataArray.add(recParticle);
                 dataGroups.getItem(1).getH1F("hi_p_pos").fill(recParticle.p());
                 dataGroups.getItem(1).getH1F("h_px").fill(recParticle.px());
                 dataGroups.getItem(1).getH1F("hvert_t").fill(vert_t);
 
 
             }
-        }
+       }
+       if (event.hasBank("REC::Scintillator")){
+           List<DetectorResponse> Scint_List = new ArrayList<>();
+           C12validtools Response = new C12validtools();
+           int rows = recSciBank.rows();
+           for(int loop=0;loop<rows;loop++) {
+               index = recSciBank.getInt("pindex",loop);
+               layer = recSciBank.getByte("layer",loop);
+               sector = recSciBank.getByte("sector",loop);
+               paddle = recSciBank.getInt("component",loop);
+               energy = recSciBank.getFloat("energy",loop);
+               time = recSciBank.getFloat("time",loop);
+               x = recSciBank.getFloat("x",loop);
+               y = recSciBank.getFloat("y",loop);
+               z = recSciBank.getFloat("z",loop);
+               Response.setPosition(layer,sector,paddle);
+               Response.setEnergy((energy));
+               Response.setEnergy((time));
+           }
+           Scint_List.add(Response);
+           //Energy.put(nEvents,energy);
+       }
 
+    }
+
+
+
+
+    public void Read_RECArray(ArrayList<Particle> Data) {
+        //for (Particle i : REC_DataArray)
+            //System.out.println(i);
+        System.out.println(Data.get(0));
+        System.out.println(Data.get(1));
+        System.out.println(Data.size());
+        //System.out.println(Energy.get(0));
     }
 
 
