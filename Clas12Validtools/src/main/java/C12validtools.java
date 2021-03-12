@@ -53,6 +53,7 @@ public class C12validtools extends DetectorResponse {
     //private DataBank recBank;
     //private DataBank runBank;
     IndexedList<DataGroup> dataGroups      = new IndexedList<DataGroup>(1);
+    IndexedList<DataGroup> ScintGroups      = new IndexedList<DataGroup>(1);
     EmbeddedCanvasTabbed   canvasTabbed    = null;
     ArrayList<String>      canvasTabNames  = new ArrayList<String>();
     ArrayList<Double>      REC_Data        = new ArrayList<Double>();
@@ -104,6 +105,8 @@ public class C12validtools extends DetectorResponse {
         canvasTabbed.getCanvas("TBT Positive Tracks").draw(dataGroups.getItem(1).getH1F("h_px"));
         canvasTabbed.getCanvas("TBT Positive Tracks").cd(2);
         canvasTabbed.getCanvas("TBT Positive Tracks").draw(dataGroups.getItem(1).getH1F("hvert_t"));
+        canvasTabbed.getCanvas("TBT Positive Tracks").cd(3);
+        canvasTabbed.getCanvas("TBT Positive Tracks").draw(ScintGroups.getItem(1).getH1F("Energy"));
     }
     /*creating Histos*/
     private void CreateHistos() {
@@ -119,12 +122,18 @@ public class C12validtools extends DetectorResponse {
         H1F beta = new H1F("Beta","Beta",100,-1,3);
         beta.setTitleX("Beta");
         beta.setTitleY("Counts");
+        H1F Energy_Dep = new H1F("Energy","Energy",100,0,100);
+        Energy_Dep.setTitleX("Energy Deposited");
         DataGroup dg_pos = new DataGroup(1,1);
         dg_pos.addDataSet(hi_p_pos, 1);
         dg_pos.addDataSet(hvert_x, 2);
         dg_pos.addDataSet(hvert_t,3);
         dg_pos.addDataSet(beta,4);
         dataGroups.add(dg_pos, 1);
+
+        DataGroup Scint = new DataGroup(1,1);
+        Scint.addDataSet(Energy_Dep,1);
+        ScintGroups.add(Scint,1);
 
     }
     public void setAnalysisTabNames(String... names) {
@@ -197,6 +206,8 @@ public class C12validtools extends DetectorResponse {
      */
     public void loadMaps() {
         //loadMap(recCalMap,recCalBank,recPartBank,"pindex");
+        System.out.println("load Map");
+        loadMap(recSciMap,recSciBank,recPartBank,"pindex");
 
     }
 
@@ -272,6 +283,8 @@ public class C12validtools extends DetectorResponse {
            }
            Scint_List.add(Response);
            //Energy.put(nEvents,energy);
+
+           ScintGroups.getItem(1).getH1F("Energy").fill(energy);
        }
 
     }
