@@ -206,7 +206,7 @@ public class C12validtools extends DetectorResponse {
      */
     public void loadMaps() {
         //loadMap(recCalMap,recCalBank,recPartBank,"pindex");
-        System.out.println("load Map");
+        //System.out.println("load Map");
         loadMap(recSciMap,recSciBank,recPartBank,"pindex");
 
     }
@@ -233,6 +233,7 @@ public class C12validtools extends DetectorResponse {
         int sector;
         int layer;
         int paddle=0;
+        double px_Map=0;
         if ((nEvents % 10000) == 0) System.out.println("Analyzed " + nEvents + " events");
        if(event.hasBank("REC::Particle")==true) {
 
@@ -280,6 +281,11 @@ public class C12validtools extends DetectorResponse {
                Response.setPosition(layer,sector,paddle);
                Response.setEnergy((energy));
                Response.setEnergy((time));
+
+               if (recSciMap.containsKey(loop)){
+                   px_Map = recSciBank.getFloat("x",recSciMap.get(loop).get(0));
+               }
+               System.out.println("PX_map"+px_Map);
            }
            Scint_List.add(Response);
            //Energy.put(nEvents,energy);
