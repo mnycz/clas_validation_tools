@@ -233,6 +233,8 @@ public class C12validtools extends DetectorResponse {
         this.getDescriptor().setSectorLayerComponent(sector, layer, component);
     }
 
+    //public void CherenkovResponse()
+
     private void ProcessEvent(DataEvent event) {
         nEvents++;
         int index = 0;
@@ -307,6 +309,10 @@ public class C12validtools extends DetectorResponse {
             int rows = recCheBank.rows();
             for(int loop=0;loop<rows;loop++){
                 index= recCheBank.getInt("pindex",loop);
+                double x_cer = recCheBank.getFloat("x",loop);
+                double y_cer = recCheBank.getFloat("y",loop);
+                double z_cer = recCheBank.getFloat("z",loop);
+                double time_cer = recCheBank.getFloat("time",loop);
                 nphe = recCheBank.getFloat("nphe",loop);
                 dataGroups.getItem(3).getH1F("Num_phe").fill(nphe);
             }
