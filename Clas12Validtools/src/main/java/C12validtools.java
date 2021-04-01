@@ -54,10 +54,11 @@ public class C12validtools extends DetectorResponse {
     ArrayList<Particle> REC_DataArray      = new ArrayList<>();
     List<DetectorResponse> Scint_List      = new ArrayList<>();
 
+
     public static void main(String[] args){
         C12validtools c12vt = new C12validtools();
 
-        c12vt.setAnalysisTabNames("REC Particle","Scintillator","Calorimeter");
+        c12vt.setAnalysisTabNames("REC Particle","Scintillator","Calorimeter","Cherenkov");
 
         c12vt.CreateHistos();
 
@@ -106,6 +107,14 @@ public class C12validtools extends DetectorResponse {
         canvasTabbed.getCanvas("Scintillator").setGridY(false);
         canvasTabbed.getCanvas("Scintillator").cd(0);
         canvasTabbed.getCanvas("Scintillator").draw(dataGroups.getItem(2).getH1F("hsc_energy"));
+        //___________________________________
+        //Cherenkov tab
+        canvasTabbed.getCanvas("Cherenkov").divide(2,2);
+        canvasTabbed.getCanvas("Cherenkov").setGridX(false);
+        canvasTabbed.getCanvas("Cherenkov").setGridY(false);
+        canvasTabbed.getCanvas("Cherenkov").cd(0);
+        canvasTabbed.getCanvas("Cherenkov").draw(dataGroups.getItem(3).getH1F("Num_phe"));
+        //_____________________________________
 
     }
     /*creating Histos*/
@@ -136,7 +145,12 @@ public class C12validtools extends DetectorResponse {
         DataGroup dscinth = new DataGroup(1,1);
         dscinth.addDataSet(hsc_energy,1);
         dataGroups.add(dscinth, 2);
-
+        //__Cherenkov_____
+        H1F Nphe = new H1F("Num_phe","Num_phe",100,0,20);
+        Nphe.setTitleX("# Photoelectrons");
+        DataGroup dg_Cherenkov = new DataGroup(1,1);
+        dg_Cherenkov.addDataSet(Nphe,1);
+        dataGroups.add(dg_Cherenkov,3);
     }
     public void setAnalysisTabNames(String... names) {
         for(String name : names) {
@@ -228,6 +242,7 @@ public class C12validtools extends DetectorResponse {
         int sector;
         int layer;
         int paddle=0;
+        float nphe= 0;
         if (recBank==null || recPartBank==null || recFtBank==null || recFtPartBank==null) return;
         if (debug) {
             System.out.println("\n\n#############################################################\n");
@@ -256,7 +271,7 @@ public class C12validtools extends DetectorResponse {
                         recPartBank.getFloat("vz", loop));
                 float vert_t = recPartBank.getFloat("vt", loop);
                 REC_DataArray.add(recParticle);
-                System.out.println(recParticle.charge());
+                //System.out.println(recParticle.charge());
                 dataGroups.getItem(1).getH1F("hi_p_pos").fill(recParticle.p());
                 dataGroups.getItem(1).getH1F("h_px").fill(recParticle.px());
                 dataGroups.getItem(1).getH1F("hvert_t").fill(vert_t);
@@ -287,13 +302,25 @@ public class C12validtools extends DetectorResponse {
             //Energy.put(nEvents,energy);
         }
 
+
+        if (event.hasBank("REC::Cherenkov")){
+            int rows = recCheBank.rows();
+            for(int loop=0;loop<rows;loop++){
+                index= recCheBank.getInt("pindex",loop);
+                nphe = recCheBank.getFloat("nphe",loop);
+                dataGroups.getItem(3).getH1F("Num_phe").fill(nphe);
+            }
+
+        }
+
     }
 
     public void Read_RECArray(ArrayList<Particle> Data) {
 ;
-        System.out.println(Data.get(0));
+        /*System.out.println(Data.get(0));
         System.out.println(Data.get(1));
         System.out.println(Data.size());
+         */
     }
 
 }
