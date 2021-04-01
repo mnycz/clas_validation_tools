@@ -114,6 +114,10 @@ public class C12validtools extends DetectorResponse {
         canvasTabbed.getCanvas("Cherenkov").setGridY(false);
         canvasTabbed.getCanvas("Cherenkov").cd(0);
         canvasTabbed.getCanvas("Cherenkov").draw(dataGroups.getItem(3).getH1F("Num_phe"));
+        F1D tmp = new F1D("tmp");
+        tmp= Cherenkov_Fit(dataGroups.getItem(3).getH1F("num_phe"));
+        canvasTabbed.getCanvas("Cherenkov").draw(tmp,"same");
+
         //_____________________________________
 
     }
@@ -146,7 +150,7 @@ public class C12validtools extends DetectorResponse {
         dscinth.addDataSet(hsc_energy,1);
         dataGroups.add(dscinth, 2);
         //__Cherenkov_____
-        H1F Nphe = new H1F("Num_phe","Num_phe",100,0,20);
+        H1F Nphe = new H1F("Num_phe","Num_phe",10,0,50);
         Nphe.setTitleX("# Photoelectrons");
         DataGroup dg_Cherenkov = new DataGroup(1,1);
         dg_Cherenkov.addDataSet(Nphe,1);
@@ -319,6 +323,19 @@ public class C12validtools extends DetectorResponse {
 
         }
 
+    }
+
+
+    public F1D Cherenkov_Fit(H1F histo){
+        F1D f1 = new F1D("f1","[amp]*gaus(x,[mean],[sigma])", 0, 50.0);
+        DataFitter.fit(f1, histo, "Q");
+        f1.setParameter(0, 50.0);
+        f1.setParameter(1, 30.0);
+        f1.setParameter(2, 5.0);
+        f1.setLineColor(5);
+        f1.setLineWidth(7);
+        f1.setOptStat(111110);
+        return f1;
     }
 
     public void Read_RECArray(ArrayList<Particle> Data) {
