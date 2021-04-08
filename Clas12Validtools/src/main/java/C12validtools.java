@@ -290,38 +290,55 @@ public class C12validtools extends DetectorResponse {
             C12validtools Response = new C12validtools();
             int rows = recSciBank.rows();
             for(int loop=0;loop<rows;loop++) {
-                index  = recSciBank.getInt("pindex",loop);
-                layer  = recSciBank.getByte("layer",loop);
-                sector = recSciBank.getByte("sector",loop);
-                paddle = recSciBank.getInt("component",loop);
-                energy = recSciBank.getFloat("energy",loop);
-                time   = recSciBank.getFloat("time",loop);
-                x = recSciBank.getFloat("x",loop);
-                y = recSciBank.getFloat("y",loop);
-                z = recSciBank.getFloat("z",loop);
-                dataGroups.getItem(2).getH1F("hsc_energy").fill(energy);
-                Response.setPosition(layer,sector,paddle);
-                Response.setEnergy((energy));
-                Response.setEnergy((time));
+                if (recSciMap.containsKey(loop)) {
+                    index = recSciBank.getInt("pindex", loop);
+                    layer = recSciBank.getByte("layer", loop);
+                    sector = recSciBank.getByte("sector", loop);
+                    paddle = recSciBank.getInt("component", loop);
+                    energy = recSciBank.getFloat("energy", loop);
+                    time = recSciBank.getFloat("time", loop);
+                    x = recSciBank.getFloat("x", loop);
+                    y = recSciBank.getFloat("y", loop);
+                    z = recSciBank.getFloat("z", loop);
+                    dataGroups.getItem(2).getH1F("hsc_energy").fill(energy);
+                    Response.setPosition(layer, sector, paddle);
+                    Response.setEnergy((energy));
+                    Response.setEnergy((time));
+                }
             }
             Scint_List.add(Response);
-            //Energy.put(nEvents,energy);
         }
 
 
         if (event.hasBank("REC::Cherenkov")){
             int rows = recCheBank.rows();
             for(int loop=0;loop<rows;loop++){
-                index= recCheBank.getInt("pindex",loop);
-                double x_cer = recCheBank.getFloat("x",loop);
-                double y_cer = recCheBank.getFloat("y",loop);
-                double z_cer = recCheBank.getFloat("z",loop);
-                double time_cer = recCheBank.getFloat("time",loop);
-                nphe = recCheBank.getFloat("nphe",loop);
-                dataGroups.getItem(3).getH1F("Num_phe").fill(nphe);
+                if (recCheMap.containsKey(loop)) {
+                    //System.out.println("Succes! Has the same key!");
+                    index = recCheBank.getInt("pindex", loop);
+                    double x_cer = recCheBank.getFloat("x", loop);
+                    double y_cer = recCheBank.getFloat("y", loop);
+                    double z_cer = recCheBank.getFloat("z", loop);
+                    double time_cer = recCheBank.getFloat("time", loop);
+                    nphe = recCheBank.getFloat("nphe", loop);
+                    dataGroups.getItem(3).getH1F("Num_phe").fill(nphe);
+                }
+            }
+        }
+
+        if (event.hasBank("REC:Calorimeter")){
+            int rows = recCalBank.rows();
+            for (int loop=0;loop<rows;loop++){
+                if (recCalMap.containsKey(loop)){
+                    index = recCheBank.getInt("pindex", loop);
+                    double Energy = recCalBank.getFloat("energy",loop);
+
+                }
             }
 
+
         }
+
 
     }
 
