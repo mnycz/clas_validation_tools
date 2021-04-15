@@ -58,7 +58,7 @@ public class C12validtools extends DetectorResponse {
     public static void main(String[] args){
         C12validtools c12vt = new C12validtools();
 
-        c12vt.setAnalysisTabNames("REC Particle","Scintillator","Calorimeter","Cherenkov");
+        c12vt.setAnalysisTabNames("REC Particle","Scintillator","Calorimeter","Cherenkov","Pi 0");
 
         c12vt.CreateHistos();
 
@@ -117,8 +117,15 @@ public class C12validtools extends DetectorResponse {
         F1D tmp = new F1D("tmp");
         tmp= Cherenkov_Fit(dataGroups.getItem(3).getH1F("num_phe"));
         canvasTabbed.getCanvas("Cherenkov").draw(tmp,"same");
-
         //_____________________________________
+        //Pi0 Mass
+        canvasTabbed.getCanvas("Pi 0").divide(2,2);
+        canvasTabbed.getCanvas("Pi 0").setGridX(false);
+        canvasTabbed.getCanvas("Pi 0").setGridY(false);
+        canvasTabbed.getCanvas("Pi 0").cd(0);
+        canvasTabbed.getCanvas("Pi 0").draw(dataGroups.getItem(4).getH1F("Pi0 Mass"));
+
+
 
     }
     /*creating Histos*/
@@ -155,6 +162,12 @@ public class C12validtools extends DetectorResponse {
         DataGroup dg_Cherenkov = new DataGroup(1,1);
         dg_Cherenkov.addDataSet(Nphe,1);
         dataGroups.add(dg_Cherenkov,3);
+        //_____Pi 0 Mass_______
+        H1F Pi0_Mass = new H1F("Pi0 Mass","Mass [GeV]",100,0,0.5);
+        DataGroup dg_Pion= new DataGroup(1,1);
+        dg_Pion.addDataSet(Pi0_Mass,1);
+        dataGroups.add(dg_Pion,4); // this is being filled in REC::Particle so the index order is backwards
+
     }
     public void setAnalysisTabNames(String... names) {
         for(String name : names) {
@@ -249,6 +262,7 @@ public class C12validtools extends DetectorResponse {
         int layer;
         int paddle=0;
         float nphe= 0;
+        int n_e = 0;
         if (recBank==null || recPartBank==null || recFtBank==null || recFtPartBank==null) return;
         if (debug) {
             System.out.println("\n\n#############################################################\n");
@@ -260,31 +274,52 @@ public class C12validtools extends DetectorResponse {
         if ((nEvents % 10000) == 0) System.out.println("Analyzed " + nEvents + " events");
        if(event.hasBank("REC::Particle")==true) {
 
-            int rows = recPartBank.rows();
-            for (int loop = 0; loop < rows; loop++) {
-                int pidCode = 0;
-                if (recPartBank.getByte("charge", loop) == -1) pidCode = 11;
-                else if (recPartBank.getByte("charge", loop) == 1) pidCode = 211;
-                else pidCode = 22;
+           int rows = recPartBank.rows();
+           for (int loop = 0; loop < rows; loop++) {
+               int pidCode = 0;
+               int status = 0;
+               if (recPartBank.getByte("charge", loop) == -1) pidCode = 11;
+               else if (recPartBank.getByte("charge", loop) == 1) pidCode = 211;
+               else pidCode = 22;
+               int stat = Math.abs(recPartBank.getShort("status", loop));
+               if (pidCode==11){
+               //if (stat > 2000 && stat < 4000 && pidCode == 11) {
+                   //n_e++;
+                   //}
 
-                Particle recParticle = new Particle(
-                        pidCode,
-                        recPartBank.getFloat("px", loop),
-                        recPartBank.getFloat("py", loop),
-                        recPartBank.getFloat("pz", loop),
-                        recPartBank.getFloat("vx", loop),
-                        recPartBank.getFloat("vy", loop),
-                        recPartBank.getFloat("vz", loop));
-                float vert_t = recPartBank.getFloat("vt", loop);
-                REC_DataArray.add(recParticle);
-                //System.out.println(recParticle.charge());
-                dataGroups.getItem(1).getH1F("hi_p_pos").fill(recParticle.p());
-                dataGroups.getItem(1).getH1F("h_px").fill(recParticle.px());
-                dataGroups.getItem(1).getH1F("hvert_t").fill(vert_t);
+                   Particle recParticle = new Particle(
+                           pidCode,
+                           recPartBank.getFloat("px", loop),
+                           recPartBank.getFloat("py", loop),
+                           recPartBank.getFloat("pz", loop),
+                           recPartBank.getFloat("vx", loop),
+                           recPartBank.getFloat("vy", loop),
+                           recPartBank.getFloat("vz", loop));
+                   float vert_t = recPartBank.getFloat("vt", loop);
+                   REC_DataArray.add(recParticle);
+                   //System.out.println(recParticle.charge());
+                   dataGroups.getItem(1).getH1F("hi_p_pos").fill(recParticle.p());
+                   dataGroups.getItem(1).getH1F("h_px").fill(recParticle.px());
+                   dataGroups.getItem(1).getH1F("hvert_t").fill(vert_t);
+                   double Mass = recParticle.mass();
+                   //System.out.println("MASS"+Mass);
 
-
-            }
-        }
+               }
+               else if (pidCode ==211){
+                   Particle P0Particle = new Particle(
+                           pidCode,
+                           recPartBank.getFloat("px", loop),
+                           recPartBank.getFloat("py", loop),
+                           recPartBank.getFloat("pz", loop),
+                           recPartBank.getFloat("vx", loop),
+                           recPartBank.getFloat("vy", loop),
+                           recPartBank.getFloat("vz", loop));
+                   double P0_Mass = P0Particle.mass();
+                   System.out.println("P0"+P0_Mass);
+                   dataGroups.getItem(4).getH1F("Pi0 Mass").fill(P0_Mass);
+               }
+           }
+       }
 
         if (event.hasBank("REC::Scintillator")){
             C12validtools Response = new C12validtools();
