@@ -17,6 +17,7 @@ import java.util.HashMap;
 
 import com.sun.prism.Graphics;
 import org.jlab.clas.detector.DetectorResponse;
+import org.jlab.detector.base.DetectorType;
 import org.jlab.io.base.DataBank;
 import org.jlab.io.base.DataEvent;
 import org.jlab.io.hipo.HipoDataSource;
@@ -46,6 +47,7 @@ public class C12validtools extends DetectorResponse {
     Map <Integer,List<Integer>> recCheMap=new HashMap<Integer,List<Integer>>();
     Map <Integer,List<Integer>> recSciMap=new HashMap<Integer,List<Integer>>();
     Map <Integer,List<Integer>> recTrkMap=new HashMap<Integer,List<Integer>>();
+    Map <Integer,List<Integer>> recFtMap=new HashMap<Integer,List<Integer>>();
 
     IndexedList<DataGroup> dataGroups      = new IndexedList<DataGroup>(1);
     EmbeddedCanvasTabbed   canvasTabbed    = null;
@@ -53,12 +55,14 @@ public class C12validtools extends DetectorResponse {
     ArrayList<Double>      REC_Data        = new ArrayList<Double>();
     ArrayList<Particle> REC_DataArray      = new ArrayList<>();
     List<DetectorResponse> Scint_List      = new ArrayList<>();
-
+    List<DetectorResponse> Calo_List      = new ArrayList<>();
+    List<DetectorResponse> Ft_List      = new ArrayList<>();
+    List<DetectorResponse> Cher_List      = new ArrayList<>();
 
     public static void main(String[] args){
         C12validtools c12vt = new C12validtools();
 
-        c12vt.setAnalysisTabNames("REC Particle","Scintillator","Calorimeter","Cherenkov","Pi 0");
+        c12vt.setAnalysisTabNames("REC Particle","Scintillator","Calorimeter","Cherenkov","Forward Tagger");
 
         c12vt.CreateHistos();
 
@@ -107,25 +111,25 @@ public class C12validtools extends DetectorResponse {
         canvasTabbed.getCanvas("Scintillator").setGridY(false);
         canvasTabbed.getCanvas("Scintillator").cd(0);
         canvasTabbed.getCanvas("Scintillator").draw(dataGroups.getItem(2).getH1F("hsc_energy"));
-        //___________________________________
-        //Cherenkov tab
+        //Calorimeter tab
+        //Scinttilator tab
+        canvasTabbed.getCanvas("Calorimeter").divide(2,2);
+        canvasTabbed.getCanvas("Calorimeter").setGridX(false);
+        canvasTabbed.getCanvas("Calorimeter").setGridY(false);
+        canvasTabbed.getCanvas("Calorimeter").cd(0);
+        canvasTabbed.getCanvas("Calorimeter").draw(dataGroups.getItem(3).getH1F("hcal_energy"));
+        canvasTabbed.getCanvas("Calorimeter").cd(1);
+        canvasTabbed.getCanvas("Calorimeter").draw(dataGroups.getItem(3).getH1F("hcal_path"));
+        // Cherenkov
         canvasTabbed.getCanvas("Cherenkov").divide(2,2);
         canvasTabbed.getCanvas("Cherenkov").setGridX(false);
         canvasTabbed.getCanvas("Cherenkov").setGridY(false);
         canvasTabbed.getCanvas("Cherenkov").cd(0);
-        canvasTabbed.getCanvas("Cherenkov").draw(dataGroups.getItem(3).getH1F("Num_phe"));
+
+        canvasTabbed.getCanvas("Cherenkov").draw(dataGroups.getItem(4).getH1F("Num_phe"));
         F1D tmp = new F1D("tmp");
-        tmp= Cherenkov_Fit(dataGroups.getItem(3).getH1F("num_phe"));
+        tmp= Cherenkov_Fit(dataGroups.getItem(4).getH1F("Num_phe"));
         canvasTabbed.getCanvas("Cherenkov").draw(tmp,"same");
-        //_____________________________________
-        //Pi0 Mass
-        canvasTabbed.getCanvas("Pi 0").divide(2,2);
-        canvasTabbed.getCanvas("Pi 0").setGridX(false);
-        canvasTabbed.getCanvas("Pi 0").setGridY(false);
-        canvasTabbed.getCanvas("Pi 0").cd(0);
-        canvasTabbed.getCanvas("Pi 0").draw(dataGroups.getItem(4).getH1F("Pi0 Mass"));
-
-
 
     }
     /*creating Histos*/
@@ -156,17 +160,23 @@ public class C12validtools extends DetectorResponse {
         DataGroup dscinth = new DataGroup(1,1);
         dscinth.addDataSet(hsc_energy,1);
         dataGroups.add(dscinth, 2);
-        //__Cherenkov_____
+        //Calorimeter hists
+        H1F hcal_energy = new H1F("hcal_energy", "hcal_energy", 100, 0, 8.0);
+        hcal_energy.setTitleX("Energy");
+        hcal_energy.setTitleY("Counts");
+        H1F hcal_path = new H1F("hcal_path", "hcal_path", 100, 500.0, 900.0);
+        hcal_path.setTitleX("Path");
+        hcal_path.setTitleY("Counts");
+        DataGroup dscalh = new DataGroup(1,1);
+        dscalh.addDataSet(hcal_energy,1);
+        dscalh.addDataSet(hcal_path,2);
+        dataGroups.add(dscalh, 3);
+        //Cherenkov
         H1F Nphe = new H1F("Num_phe","Num_phe",10,0,50);
         Nphe.setTitleX("# Photoelectrons");
         DataGroup dg_Cherenkov = new DataGroup(1,1);
         dg_Cherenkov.addDataSet(Nphe,1);
-        dataGroups.add(dg_Cherenkov,3);
-        //_____Pi 0 Mass_______
-        H1F Pi0_Mass = new H1F("Pi0 Mass","Mass [GeV]",100,0,0.5);
-        DataGroup dg_Pion= new DataGroup(1,1);
-        dg_Pion.addDataSet(Pi0_Mass,1);
-        dataGroups.add(dg_Pion,4); // this is being filled in REC::Particle so the index order is backwards
+        dataGroups.add(dg_Cherenkov,4);
 
     }
     public void setAnalysisTabNames(String... names) {
@@ -208,10 +218,7 @@ public class C12validtools extends DetectorResponse {
         loadMaps();
     }
 
-    public void loadMap(Map<Integer,List<Integer>> map, 
-            DataBank fromBank, 
-            DataBank toBank, 
-            String idxVarName) {
+    public void loadMap(Map<Integer,List<Integer>> map, DataBank fromBank, DataBank toBank, String idxVarName) {
         map.clear();
         if (fromBank==null) return;
         if (toBank==null) return;
@@ -238,6 +245,7 @@ public class C12validtools extends DetectorResponse {
         loadMap(recCheMap,recCheBank,recPartBank,"pindex");
         loadMap(recSciMap,recSciBank,recPartBank,"pindex");
         loadMap(recTrkMap,recTrkBank,recPartBank,"pindex");
+        loadMap(recFtMap,recFtBank,recPartBank,"pindex");
     }
 
 
@@ -250,19 +258,10 @@ public class C12validtools extends DetectorResponse {
         this.getDescriptor().setSectorLayerComponent(sector, layer, component);
     }
 
-    //public void CherenkovResponse()
-
     private void ProcessEvent(DataEvent event) {
         nEvents++;
-        int index = 0;
-        float energy = 0;
-        float time=0;
-        float x,y,z=0;
-        int sector;
-        int layer;
-        int paddle=0;
-        float nphe= 0;
-        int n_e = 0;
+        //scintillator variables
+        //debug
         if (recBank==null || recPartBank==null || recFtBank==null || recFtPartBank==null) return;
         if (debug) {
             System.out.println("\n\n#############################################################\n");
@@ -270,132 +269,204 @@ public class C12validtools extends DetectorResponse {
             recFtBank.show();
             recPartBank.show();
         }
-
+//Rec particle
         if ((nEvents % 10000) == 0) System.out.println("Analyzed " + nEvents + " events");
-       if(event.hasBank("REC::Particle")==true) {
+        if(event.hasBank("REC::Particle")==true) {
 
-           int rows = recPartBank.rows();
-           for (int loop = 0; loop < rows; loop++) {
-               int pidCode = 0;
-               int status = 0;
-               if (recPartBank.getByte("charge", loop) == -1) pidCode = 11;
-               else if (recPartBank.getByte("charge", loop) == 1) pidCode = 211;
-               else pidCode = 22;
-               int stat = Math.abs(recPartBank.getShort("status", loop));
-               if (pidCode==11){
-               //if (stat > 2000 && stat < 4000 && pidCode == 11) {
-                   //n_e++;
-                   //}
+            int rows = recPartBank.rows();
+            System.out.println("rows recbank: ");
+            System.out.println(rows);
+            for (int loop = 0; loop < rows; loop++) {
+                int pidCode = 0;
+                if (recPartBank.getByte("charge", loop) == -1) pidCode = 11;
+                else if (recPartBank.getByte("charge", loop) == 1) pidCode = 211;
+                else pidCode = 22;
 
-                   Particle recParticle = new Particle(
-                           pidCode,
-                           recPartBank.getFloat("px", loop),
-                           recPartBank.getFloat("py", loop),
-                           recPartBank.getFloat("pz", loop),
-                           recPartBank.getFloat("vx", loop),
-                           recPartBank.getFloat("vy", loop),
-                           recPartBank.getFloat("vz", loop));
-                   float vert_t = recPartBank.getFloat("vt", loop);
-                   REC_DataArray.add(recParticle);
-                   //System.out.println(recParticle.charge());
-                   dataGroups.getItem(1).getH1F("hi_p_pos").fill(recParticle.p());
-                   dataGroups.getItem(1).getH1F("h_px").fill(recParticle.px());
-                   dataGroups.getItem(1).getH1F("hvert_t").fill(vert_t);
-                   double Mass = recParticle.mass();
-                   //System.out.println("MASS"+Mass);
+                Particle recParticle = new Particle(
+                        pidCode,
+                        recPartBank.getFloat("px", loop),
+                        recPartBank.getFloat("py", loop),
+                        recPartBank.getFloat("pz", loop),
+                        recPartBank.getFloat("vx", loop),
+                        recPartBank.getFloat("vy", loop),
+                        recPartBank.getFloat("vz", loop));
+                float vert_t = recPartBank.getFloat("vt", loop);
+                REC_DataArray.add(recParticle);
+                //System.out.println(recParticle.charge());
+                dataGroups.getItem(1).getH1F("hi_p_pos").fill(recParticle.p());
+                dataGroups.getItem(1).getH1F("h_px").fill(recParticle.px());
+                dataGroups.getItem(1).getH1F("hvert_t").fill(vert_t);
 
-               }
-               else if (pidCode ==211){
-                   Particle P0Particle = new Particle(
-                           pidCode,
-                           recPartBank.getFloat("px", loop),
-                           recPartBank.getFloat("py", loop),
-                           recPartBank.getFloat("pz", loop),
-                           recPartBank.getFloat("vx", loop),
-                           recPartBank.getFloat("vy", loop),
-                           recPartBank.getFloat("vz", loop));
-                   double P0_Mass = P0Particle.mass();
-                   System.out.println("P0"+P0_Mass);
-                   dataGroups.getItem(4).getH1F("Pi0 Mass").fill(P0_Mass);
-               }
-           }
-       }
 
+            }
+        }
+//Scintillator
         if (event.hasBank("REC::Scintillator")){
             C12validtools Response = new C12validtools();
             int rows = recSciBank.rows();
+            System.out.println("rows scint: ");
+            System.out.println(rows);
             for(int loop=0;loop<rows;loop++) {
-                if (recSciMap.containsKey(loop)) {
-                    index = recSciBank.getInt("pindex", loop);
-                    layer = recSciBank.getByte("layer", loop);
-                    sector = recSciBank.getByte("sector", loop);
-                    paddle = recSciBank.getInt("component", loop);
-                    energy = recSciBank.getFloat("energy", loop);
-                    time = recSciBank.getFloat("time", loop);
-                    x = recSciBank.getFloat("x", loop);
-                    y = recSciBank.getFloat("y", loop);
-                    z = recSciBank.getFloat("z", loop);
-                    dataGroups.getItem(2).getH1F("hsc_energy").fill(energy);
-                    Response.setPosition(layer, sector, paddle);
-                    Response.setEnergy((energy));
-                    Response.setEnergy((time));
-                }
+                int   index  = recSciBank.getInt("pindex",loop);
+                int   layer  = recSciBank.getByte("layer",loop);
+                int   sector = recSciBank.getByte("sector",loop);
+                int   paddle = recSciBank.getInt("component",loop);
+                float   energy = recSciBank.getFloat("energy",loop);
+                float   time   = recSciBank.getFloat("time",loop);
+                float  x    = recSciBank.getFloat("x",loop);
+                float  y    = recSciBank.getFloat("y",loop);
+                float  z    = recSciBank.getFloat("z",loop);
+                float  hx   = recSciBank.getFloat("hx",loop);
+                float  hy   = recSciBank.getFloat("hy",loop);
+                float  hz   = recSciBank.getFloat("hz",loop);
+                float  path = recSciBank.getFloat("path",loop);
+                dataGroups.getItem(2).getH1F("hsc_energy").fill(hx);
+                Response.setPosition(layer,sector,paddle);
+                Response.setEnergy((energy));
+                Response.setEnergy((time));
+
             }
             Scint_List.add(Response);
+            //Energy.put(nEvents,energy);
         }
-
-
-        if (event.hasBank("REC::Cherenkov")){
-            int rows = recCheBank.rows();
-            for(int loop=0;loop<rows;loop++){
-                if (recCheMap.containsKey(loop)) {
-                    //System.out.println("Succes! Has the same key!");
-                    index = recCheBank.getInt("pindex", loop);
-                    double x_cer = recCheBank.getFloat("x", loop);
-                    double y_cer = recCheBank.getFloat("y", loop);
-                    double z_cer = recCheBank.getFloat("z", loop);
-                    double time_cer = recCheBank.getFloat("time", loop);
-                    nphe = recCheBank.getFloat("nphe", loop);
-                    dataGroups.getItem(3).getH1F("Num_phe").fill(nphe);
-                }
-            }
-        }
-
-        if (event.hasBank("REC:Calorimeter")){
+//Calorimeter
+        if (event.hasBank("REC::Calorimeter")){
+            C12validtools Response = new C12validtools();
+            // DetectorType type = null;
             int rows = recCalBank.rows();
-            for (int loop=0;loop<rows;loop++){
-                if (recCalMap.containsKey(loop)){
-                    index = recCheBank.getInt("pindex", loop);
-                    double Energy = recCalBank.getFloat("energy",loop);
+            System.out.println("rows Calo: ");
+            System.out.println(rows);
+            for(int loop=0;loop<rows;loop++) {
+                int sector = recCalBank.getByte("sector", loop);
+                int layer = recCalBank.getByte("layer", loop);
 
-                }
+                float x = recCalBank.getFloat("x", loop);
+                float y = recCalBank.getFloat("y", loop);
+                float z = recCalBank.getFloat("z", loop);
+                float hx = recCalBank.getFloat("hx", loop);
+                float hy = recCalBank.getFloat("hy", loop);
+                float hz = recCalBank.getFloat("hz", loop);
+                float path = recCalBank.getFloat("path", loop);
+                float energy = recCalBank.getFloat("energy", loop);
+                //float u = recCalBank.getFloat("widthu",loop);
+                //float v = recCalBank.getFloat("widthu",loop);
+                //float w = recCalBank.getFloat("widthw",loop);
+                //Response.getDescriptor().setType(type);
+                Response.setPosition(x, y, z);
+                Response.setHitIndex(loop);
+                Response.setEnergy(energy);
+                Response.setTime(recCalBank.getFloat("time", loop));
+                Response.setStatus(recCalBank.getInt("status",loop));
+                dataGroups.getItem(3).getH1F("hcal_energy").fill(energy);
+                dataGroups.getItem(3).getH1F("hcal_path").fill(path);
             }
-
-
+            Calo_List.add(Response);
         }
+//CHERENKOV
 
+        DetectorType type=null;
+        if (event.hasBank("REC::Cherenkov")){
+            C12validtools Response = new C12validtools();
+            // DetectorType type = null;
+            int rows = recCheBank.rows();
+            System.out.println("rows Cherenkov: ");
+            System.out.println(rows);
+            for(int loop=0;loop<rows;loop++) {
+                float x = recCheBank.getFloat("x", loop);
+                float y = recCheBank.getFloat("y", loop);
+                float z = recCheBank.getFloat("z", loop);
+                float hx = recCheBank.getFloat("hx", loop);
+                float hy = recCheBank.getFloat("hy", loop);
+                float hz = recCheBank.getFloat("hz", loop);
+                double time = recCheBank.getFloat("time",loop);
+                double nphe = recCheBank.getFloat("nphe", loop);
+                double theta = Math.atan2(Math.sqrt(x*x+y*y),z);
+                double phi   = Math.atan2(y,x);
+                int sector = 0;
+
+                double dtheta=0,dphi=0;
+                if (type==DetectorType.HTCC) {
+                    dtheta = 10*3.14159/180; // based on MC
+                    dphi   = 18*3.14159/180; // based on MC
+                    // HTCC reconstruction does not provide a sector,
+                    // so we calculate it based on hit position:
+                    sector = DetectorResponse.getSector(phi);
+                }
+                else if (type==DetectorType.LTCC) {
+                    dtheta = (35-5)/18*2 * 3.14159/180; // +/- 2 mirrors
+                    dphi   = 10*3.14159/180;
+                    sector = recCheBank.getByte("sector",loop);
+                }
+
+                //dataGroups.getItem(3).getH1F("hcal_energy").fill(energy);
+                // dataGroups.getItem(3).getH1F("hcal_path").fill(path);
+                dataGroups.getItem(4).getH1F("Num_phe").fill(nphe);
+            }
+            //Calo_List.add(Response);
+        }
+// FORWARD TAGGER
+        if (event.hasBank("REC::ForwardTagger")){
+            C12validtools Response = new C12validtools();
+            // DetectorType type = null;
+            int rows = recFtBank.rows();
+            System.out.println("rows Forward Tracker: ");
+            System.out.println(rows);
+            for(int loop=0;loop<rows;loop++) {
+
+                int id  = recFtBank.getShort("id", loop);
+                int size = recFtBank.getShort("size", loop);
+                double x = recFtBank.getFloat("x",loop);
+                double y = recFtBank.getFloat("y",loop);
+                double z = recFtBank.getFloat("z",loop);
+                double dx = recFtBank.getFloat("widthX",loop);
+                double dy = recFtBank.getFloat("widthY",loop);
+                double radius = recFtBank.getFloat("radius", loop);
+                double time = recFtBank.getFloat("time",loop);
+                double energy = recFtBank.getFloat("energy",loop);
+
+                double z0 = 0; // FIXME vertex
+                double path = Math.sqrt(x*x+y*y+(z-z0)*(z-z0));
+                double cx = x / path;
+                double cy = y / path;
+                double cz = (z-z0) / path;
+
+                Response.setPosition(x, y, z);
+                Response.setHitIndex(loop);
+                Response.setEnergy(energy);
+                Response.setTime(time);
+                // dataGroups.getItem(3).getH1F("hcal_energy").fill(energy);
+                //dataGroups.getItem(3).getH1F("hcal_path").fill(path);
+            }
+            Ft_List.add(Response);
+        }
 
     }
 
+    public void Read_RECArray(ArrayList<Particle> Data) {
+
+        System.out.println(Data.get(0));
+        System.out.println(Data.get(1));
+        System.out.println(Data.size());
+    }
 
     public F1D Cherenkov_Fit(H1F histo){
+        System.out.println(histo.getName());
+        double tmp_Mean = histo.getMean();
+        int Max_Bin = histo.getMaximumBin();
+        double tmp_Amp = histo.getBinContent(Max_Bin);
+        double tmp_sigma = histo.getRMS();
+        //System.out.println(tmp_Amp);
         F1D f1 = new F1D("f1","[amp]*gaus(x,[mean],[sigma])", 0, 50.0);
         DataFitter.fit(f1, histo, "Q");
-        f1.setParameter(0, 50.0);
-        f1.setParameter(1, 30.0);
-        f1.setParameter(2, 5.0);
+        f1.setParameter(0, tmp_Amp);
+        f1.setParameter(1, tmp_Mean);
+        f1.setParameter(2, tmp_sigma/2);
         f1.setLineColor(5);
         f1.setLineWidth(7);
         f1.setOptStat(111110);
         return f1;
     }
 
-    public void Read_RECArray(ArrayList<Particle> Data) {
-;
-        /*System.out.println(Data.get(0));
-        System.out.println(Data.get(1));
-        System.out.println(Data.size());
-         */
-    }
+
 
 }
